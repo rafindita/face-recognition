@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Advanced Face Recognition</title>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@3.11.0/dist/tf-backend-wasm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root {
             --primary-color-start: #667eea;
@@ -17,8 +17,8 @@
             --text-color: white;
             --bg-blur: rgba(255, 255, 255, 0.1);
             --bg-blur-darker: rgba(255, 255, 255, 0.15);
-            --known-color: #2ecc71; /* Hijau */
-            --unknown-color: #e74c3c; /* Merah */
+            --known-color: #2ecc71;
+            --unknown-color: #e74c3c;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,7 +58,11 @@
         .btn-danger { background: linear-gradient(135deg, var(--danger-color-start), var(--danger-color-end)); }
         button:active { transform: scale(0.95); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .status { margin-top: 15px; padding: 15px; border-radius: 12px; background: var(--bg-blur-darker); text-align: center; font-size: 14px; transition: background-color 0.3s; }
+        .status { 
+            margin-top: 15px; padding: 15px; border-radius: 12px; 
+            background: var(--bg-blur-darker); text-align: center; 
+            font-size: 14px; transition: background-color 0.3s; 
+        }
         .loading { display: none; text-align: center; padding: 20px; }
         .loading.active { display: block; }
         .spinner {
@@ -72,7 +76,10 @@
             background: var(--bg-blur); padding: 10px; margin-bottom: 8px; border-radius: 8px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .person-item button { padding: 5px 10px; background: var(--unknown-color); border-radius: 5px; min-width: auto; flex: 0; }
+        .person-item button { 
+            padding: 5px 10px; background: var(--unknown-color); 
+            border-radius: 5px; min-width: auto; flex: 0; 
+        }
         .alert-info { background-color: rgba(52, 152, 219, 0.3); }
         .alert-warning { background-color: rgba(241, 196, 15, 0.3); }
         .alert-success { background-color: rgba(46, 204, 113, 0.3); }
@@ -123,55 +130,63 @@
             // --- Variabel State ---
             let stream = null;
             let detectionInterval = null;
-            let faceDatabase = loadFromLocalStorage();
+            let faceDatabase = [];
             let faceMatcher = null;
+            let modelsLoaded = false;
 
             // --- Konfigurasi ---
             const MODELS_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
-            const DETECTION_INTERVAL_MS = 200; // 5 FPS
+            const DETECTION_INTERVAL_MS = 300;
             const SAMPLES_FOR_REGISTRATION = 5;
-            const DISTANCE_THRESHOLD = 0.5; // [LOGIKA KUNCI] Ambang batas untuk "Unknown"
+            const DISTANCE_THRESHOLD = 0.6;
 
             // =================================================================
             // === FUNGSI UTAMA (Inisialisasi, Kamera, Deteksi)
             // =================================================================
 
             async function initialize() {
-                const modelsLoaded = await loadModels();
-                if (modelsLoaded) {
-                    updateUIOnLoad();
-                }
+                await loadModels();
+                loadFromMemory();
             }
 
             async function loadModels() {
                 loadingDiv.classList.add('active');
                 try {
-                    loadingText.textContent = 'Initializing AI engine...';
-                    await faceapi.tf.setBackend('wasm');
-                    await faceapi.tf.ready();
+                    loadingText.textContent = 'Loading face detection models...';
                     
-                    loadingText.textContent = 'Loading AI models...';
-                    await Promise.all([
-                        faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
-                        faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
-                        faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-                        faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL)
-                    ]);
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
+                    loadingText.textContent = 'Loading facial landmarks...';
                     
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL);
+                    loadingText.textContent = 'Loading face recognition...';
+                    
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL);
+                    
+                    modelsLoaded = true;
                     loadingDiv.classList.remove('active');
-                    updateStatus('Models loaded! Ready to start.', 'info');
-                    return true;
+                    updateStatus('✓ Models loaded! Click "Start Camera" to begin.', 'success');
+                    startBtn.disabled = false;
                 } catch (error) {
                     loadingDiv.classList.remove('active');
                     console.error("Error loading models: ", error);
-                    updateStatus('Error loading models: ' + error.message, 'warning');
-                    return false;
+                    updateStatus('❌ Error loading models. Please refresh the page.', 'warning');
                 }
             }
 
             async function startCamera() {
+                if (!modelsLoaded) {
+                    updateStatus('Models are still loading. Please wait...', 'warning');
+                    return;
+                }
+                
                 try {
-                    const constraints = { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
+                    const constraints = { 
+                        video: { 
+                            facingMode: 'user', 
+                            width: { ideal: 1280 }, 
+                            height: { ideal: 720 } 
+                        } 
+                    };
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                     videoElement.srcObject = stream;
                     
@@ -179,21 +194,22 @@
                         canvas.width = videoElement.videoWidth;
                         canvas.height = videoElement.videoHeight;
                         setButtonsState(true);
-                        updateStatus('Camera started. Detecting faces...', 'info');
-                        detectionInterval = setInterval(detectFaces, DETECTION_INTERVAL_MS);
+                        updateStatus('✓ Camera started. Detecting faces...', 'success');
+                        startDetection();
                     };
                 } catch (error) {
-                    updateStatus('Camera access denied: ' + error.message, 'warning');
+                    console.error('Camera error:', error);
+                    updateStatus('❌ Camera access denied: ' + error.message, 'warning');
                 }
             }
             
             function stopCamera() {
-                clearInterval(detectionInterval);
-                detectionInterval = null;
+                stopDetection();
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
                     stream = null;
                 }
+                videoElement.srcObject = null;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 setButtonsState(false);
                 updateStatus('Camera stopped.', 'info');
@@ -201,72 +217,109 @@
             }
 
             async function detectFaces() {
-                if (!videoElement || videoElement.readyState < 4) return;
+                if (!videoElement || videoElement.readyState !== 4) return;
 
-                const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+                try {
+                    const detections = await faceapi.detectAllFaces(
+                        videoElement, 
+                        new faceapi.TinyFaceDetectorOptions({ 
+                            inputSize: 416,
+                            scoreThreshold: 0.5 
+                        })
+                    )
                     .withFaceLandmarks()
                     .withFaceDescriptors();
 
-                faceapi.tf.dispose(); 
+                    document.getElementById('faceCount').textContent = detections.length;
+                    
+                    const displaySize = { width: canvas.width, height: canvas.height };
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                document.getElementById('faceCount').textContent = detections.length;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                if (detections.length > 0 && faceMatcher) {
-                    const results = detections.map(d => faceMatcher.findBestMatch(d.descriptor));
-                    results.forEach((result, i) => drawDetectionResult(detections[i], result));
-                } else if (detections.length > 0) {
-                    detections.forEach(d => drawDetectionResult(d, null));
+                    if (detections.length > 0 && faceMatcher) {
+                        resizedDetections.forEach(detection => {
+                            const result = faceMatcher.findBestMatch(detection.descriptor);
+                            drawDetectionResult(detection, result);
+                        });
+                    } else if (detections.length > 0) {
+                        resizedDetections.forEach(detection => {
+                            drawDetectionResult(detection, null);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Detection error:', error);
                 }
             }
 
             // =================================================================
-            // === FUNGSI REGISTRASI (Logika Baru Multi-Sampel)
+            // === FUNGSI REGISTRASI (Multi-Sampel)
             // =================================================================
             
             async function registerFace() {
-                const name = prompt('Enter your name:');
+                const name = prompt('Enter name for face registration:');
                 if (!name || name.trim() === '') return;
                 
-                stopDetection(); 
+                const trimmedName = name.trim();
+                
+                if (faceDatabase.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+                    updateStatus('⚠ Name already exists. Please use a different name.', 'warning');
+                    return;
+                }
+                
+                stopDetection();
+                updateStatus('Preparing registration...', 'info');
+                
                 let descriptors = [];
                 
                 for (let i = 1; i <= SAMPLES_FOR_REGISTRATION; i++) {
-                    updateStatus(`Capturing sample ${i}/${SAMPLES_FOR_REGISTRATION}... Hold still.`, 'info');
+                    updateStatus(`📸 Capturing sample ${i}/${SAMPLES_FOR_REGISTRATION}... Hold still!`, 'info');
                     
-                    await new Promise(resolve => setTimeout(resolve, 500)); 
+                    await new Promise(resolve => setTimeout(resolve, 800));
                     
-                    const detection = await faceapi.detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                    const detection = await faceapi.detectSingleFace(
+                        videoElement, 
+                        new faceapi.TinyFaceDetectorOptions({ inputSize: 416 })
+                    )
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
                     
                     if (detection) {
-                        descriptors.push(detection.descriptor);
+                        descriptors.push(Array.from(detection.descriptor));
+                        
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
                         const box = detection.detection.box;
-                        ctx.strokeStyle = '#FFFF00';
+                        ctx.strokeStyle = '#2ecc71';
+                        ctx.lineWidth = 3;
                         ctx.strokeRect(box.x, box.y, box.width, box.height);
+                        ctx.fillStyle = '#2ecc71';
+                        ctx.font = '16px sans-serif';
+                        ctx.fillText(`Sample ${i}/${SAMPLES_FOR_REGISTRATION}`, box.x, box.y - 10);
                     } else {
-                        i--; 
-                        updateStatus(`Sample ${i+1} failed. Make sure your face is clear.`, 'warning');
-                        await new Promise(resolve => setTimeout(resolve, 700));
+                        i--;
+                        updateStatus(`⚠ Sample failed. Adjust position and lighting.`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
 
                 if (descriptors.length === SAMPLES_FOR_REGISTRATION) {
                     const avgDescriptor = averageDescriptors(descriptors);
-                    faceDatabase.push({ name, descriptor: avgDescriptor });
-                    saveToLocalStorage();
+                    faceDatabase.push({ name: trimmedName, descriptor: avgDescriptor });
+                    saveToMemory();
                     updateUIAfterDBChange();
-                    updateStatus(`✓ ${name} registered successfully!`, 'success');
+                    updateStatus(`✓ ${trimmedName} registered successfully with ${SAMPLES_FOR_REGISTRATION} samples!`, 'success');
                 } else {
-                    updateStatus('Registration failed. Could not get enough samples.', 'warning');
+                    updateStatus('❌ Registration failed. Not enough samples captured.', 'warning');
                 }
                 
-                startDetection(); 
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                startDetection();
             }
             
             function averageDescriptors(descriptors) {
                 const numDescriptors = descriptors.length;
                 const descriptorSize = descriptors[0].length;
-                const avgDescriptor = new Float32Array(descriptorSize).fill(0);
+                const avgDescriptor = new Array(descriptorSize).fill(0);
 
                 for (let i = 0; i < descriptorSize; i++) {
                     for (let j = 0; j < numDescriptors; j++) {
@@ -277,7 +330,6 @@
                 return avgDescriptor;
             }
 
-
             // =================================================================
             // === FUNGSI PEMBANTU (UI, Penyimpanan, Logika Tambahan)
             // =================================================================
@@ -285,48 +337,75 @@
             function drawDetectionResult(detection, result) {
                 const box = detection.detection.box;
                 let label = "Detecting...";
-                let boxColor = 'yellow';
+                let boxColor = '#ffd700';
 
                 if (result) {
+                    const confidence = Math.round((1 - result.distance) * 100);
+                    
                     if (result.distance < DISTANCE_THRESHOLD) {
-                        label = `${result.label} (${Math.round((1 - result.distance) * 100)}%)`;
-                        boxColor = 'var(--known-color)';
+                        label = `${result.label} (${confidence}%)`;
+                        boxColor = '#2ecc71';
                     } else {
-                        label = `Unknown (${Math.round((1 - result.distance) * 100)}%)`;
-                        boxColor = 'var(--unknown-color)';
+                        label = `Unknown (${confidence}%)`;
+                        boxColor = '#e74c3c';
                     }
                 } else {
-                    label = faceDatabase.length > 0 ? "Unknown" : "No registered faces";
-                    boxColor = faceDatabase.length > 0 ? 'var(--unknown-color)' : 'orange';
+                    label = faceDatabase.length > 0 ? "Unknown" : "No database";
+                    boxColor = faceDatabase.length > 0 ? '#e74c3c' : '#ff9800';
                 }
                 
-                new faceapi.draw.DrawBox(box, { label, boxColor }).draw(canvas);
+                ctx.strokeStyle = boxColor;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+                
+                ctx.fillStyle = boxColor;
+                ctx.font = 'bold 16px sans-serif';
+                const textWidth = ctx.measureText(label).width;
+                ctx.fillRect(box.x, box.y - 25, textWidth + 10, 25);
+                
+                ctx.fillStyle = '#000';
+                ctx.fillText(label, box.x + 5, box.y - 7);
             }
 
-            function loadFromLocalStorage() { return JSON.parse(localStorage.getItem('faceDatabase')) || []; }
-            function saveToLocalStorage() { localStorage.setItem('faceDatabase', JSON.stringify(faceDatabase)); }
+            function loadFromMemory() {
+                const stored = localStorage.getItem('faceDatabase');
+                if (stored) {
+                    try {
+                        faceDatabase = JSON.parse(stored);
+                        updateUIAfterDBChange();
+                        updateStatus(`Loaded ${faceDatabase.length} registered face(s).`, 'info');
+                    } catch (e) {
+                        console.error('Error loading from storage:', e);
+                        faceDatabase = [];
+                    }
+                }
+            }
+            
+            function saveToMemory() { 
+                localStorage.setItem('faceDatabase', JSON.stringify(faceDatabase)); 
+            }
             
             window.removePerson = function(index) {
-                if (confirm(`Remove ${faceDatabase[index].name}?`)) {
+                const person = faceDatabase[index];
+                if (confirm(`Remove ${person.name} from database?`)) {
                     faceDatabase.splice(index, 1);
-                    saveToLocalStorage();
+                    saveToMemory();
                     updateUIAfterDBChange();
-                    updateStatus('Person removed.', 'info');
+                    updateStatus(`✓ ${person.name} removed from database.`, 'info');
                 }
             };
-            
-            function updateUIOnLoad() {
-                faceDatabase = faceDatabase.map(person => ({
-                    ...person, descriptor: new Float32Array(Object.values(person.descriptor))
-                }));
-                updateUIAfterDBChange();
-            }
 
             function updateUIAfterDBChange() {
                 document.getElementById('registeredCount').textContent = faceDatabase.length;
                 updatePersonList();
+                
                 if (faceDatabase.length > 0) {
-                    const labeledDescriptors = faceDatabase.map(p => new faceapi.LabeledFaceDescriptors(p.name, [p.descriptor]));
+                    const labeledDescriptors = faceDatabase.map(p => 
+                        new faceapi.LabeledFaceDescriptors(
+                            p.name, 
+                            [new Float32Array(p.descriptor)]
+                        )
+                    );
                     faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, DISTANCE_THRESHOLD);
                 } else {
                     faceMatcher = null;
@@ -335,16 +414,25 @@
             
             function updatePersonList() {
                 const listDiv = document.getElementById('personList');
-                listDiv.innerHTML = faceDatabase.length > 0 ? '<div style="padding: 10px; opacity: 0.8;">Registered People:</div>' : '';
+                if (faceDatabase.length === 0) {
+                    listDiv.innerHTML = '';
+                    return;
+                }
+                
+                listDiv.innerHTML = '<div style="padding: 10px; opacity: 0.8; font-weight: bold;">📋 Registered People:</div>';
+                
                 faceDatabase.forEach((p, i) => {
                     const item = document.createElement('div');
                     item.className = 'person-item';
-                    item.innerHTML = `<span>${p.name}</span><button onclick="removePerson(${i})">X</button>`;
+                    item.innerHTML = `
+                        <span>👤 ${p.name}</span>
+                        <button onclick="removePerson(${i})">✕</button>
+                    `;
                     listDiv.appendChild(item);
                 });
             }
             
-            function updateStatus(message, type) {
+            function updateStatus(message, type = 'info') {
                 const statusDiv = document.getElementById('status');
                 statusDiv.textContent = message;
                 statusDiv.className = `status alert-${type}`;
@@ -356,8 +444,18 @@
                 stopBtn.disabled = !isCameraOn;
             }
 
-            function startDetection() { if (!detectionInterval) detectionInterval = setInterval(detectFaces, DETECTION_INTERVAL_MS); }
-            function stopDetection() { clearInterval(detectionInterval); detectionInterval = null; }
+            function startDetection() { 
+                if (!detectionInterval) {
+                    detectionInterval = setInterval(detectFaces, DETECTION_INTERVAL_MS); 
+                }
+            }
+            
+            function stopDetection() { 
+                if (detectionInterval) {
+                    clearInterval(detectionInterval); 
+                    detectionInterval = null; 
+                }
+            }
 
             // --- EVENT LISTENERS ---
             startBtn.addEventListener('click', startCamera);
