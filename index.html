@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Advanced Face Recognition</title>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@3.11.0/dist/tf-backend-wasm.min.js"></script>
+    
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root {
@@ -152,7 +155,7 @@
                         faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
                         faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
                         faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-                        faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL) // Optional: untuk deteksi ekspresi
+                        faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL)
                     ]);
                     
                     loadingDiv.classList.remove('active');
@@ -204,7 +207,7 @@
                     .withFaceLandmarks()
                     .withFaceDescriptors();
 
-                faceapi.tf.dispose(); // Membersihkan memori GPU
+                faceapi.tf.dispose(); 
 
                 document.getElementById('faceCount').textContent = detections.length;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -225,32 +228,29 @@
                 const name = prompt('Enter your name:');
                 if (!name || name.trim() === '') return;
                 
-                stopDetection(); // Jeda deteksi agar fokus pada registrasi
+                stopDetection(); 
                 let descriptors = [];
                 
                 for (let i = 1; i <= SAMPLES_FOR_REGISTRATION; i++) {
                     updateStatus(`Capturing sample ${i}/${SAMPLES_FOR_REGISTRATION}... Hold still.`, 'info');
                     
-                    // Menunggu frame berikutnya agar tidak mengambil gambar yang sama
                     await new Promise(resolve => setTimeout(resolve, 500)); 
                     
                     const detection = await faceapi.detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
                     
                     if (detection) {
                         descriptors.push(detection.descriptor);
-                        // Feedback visual sementara
                         const box = detection.detection.box;
                         ctx.strokeStyle = '#FFFF00';
                         ctx.strokeRect(box.x, box.y, box.width, box.height);
                     } else {
-                        i--; // Ulangi pengambilan jika wajah tidak terdeteksi
+                        i--; 
                         updateStatus(`Sample ${i+1} failed. Make sure your face is clear.`, 'warning');
                         await new Promise(resolve => setTimeout(resolve, 700));
                     }
                 }
 
                 if (descriptors.length === SAMPLES_FOR_REGISTRATION) {
-                    // [UPGRADE] Rata-ratakan deskriptor untuk hasil yang lebih akurat
                     const avgDescriptor = averageDescriptors(descriptors);
                     faceDatabase.push({ name, descriptor: avgDescriptor });
                     saveToLocalStorage();
@@ -260,7 +260,7 @@
                     updateStatus('Registration failed. Could not get enough samples.', 'warning');
                 }
                 
-                startDetection(); // Lanjutkan deteksi kembali
+                startDetection(); 
             }
             
             function averageDescriptors(descriptors) {
@@ -288,7 +288,6 @@
                 let boxColor = 'yellow';
 
                 if (result) {
-                    // [LOGIKA KUNCI] Cek threshold di sini!
                     if (result.distance < DISTANCE_THRESHOLD) {
                         label = `${result.label} (${Math.round((1 - result.distance) * 100)}%)`;
                         boxColor = 'var(--known-color)';
@@ -297,8 +296,8 @@
                         boxColor = 'var(--unknown-color)';
                     }
                 } else {
-                    label = "No registered faces";
-                    boxColor = 'orange';
+                    label = faceDatabase.length > 0 ? "Unknown" : "No registered faces";
+                    boxColor = faceDatabase.length > 0 ? 'var(--unknown-color)' : 'orange';
                 }
                 
                 new faceapi.draw.DrawBox(box, { label, boxColor }).draw(canvas);
