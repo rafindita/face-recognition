@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Face Recognition - Mobile</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/face-api.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -254,7 +254,6 @@
     </div>
 
     <script>
-        // --- PERUBAHAN DIMULAI DI SINI ---
         document.addEventListener('DOMContentLoaded', () => {
             const videoElement = document.getElementById('videoElement');
             const canvas = document.getElementById('canvas');
@@ -278,11 +277,20 @@
                 return data ? JSON.parse(data) : [];
             }
             
+            // =================================================================
+            // === PERUBAHAN ADA DI FUNGSI DI BAWAH INI =========================
+            // =================================================================
             async function loadModels() {
                 document.getElementById('loading').classList.add('active');
-                updateStatus('Loading AI models...', 'info');
+                updateStatus('Initializing AI engine...', 'info');
                 
                 try {
+                    // **[FIX]** Menambahkan inisialisasi backend WASM secara eksplisit
+                    await faceapi.tf.setBackend('wasm');
+                    await faceapi.tf.ready();
+                    
+                    updateStatus('Loading AI models...', 'info');
+                    
                     await faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
                     await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL);
                     await faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL);
@@ -292,10 +300,14 @@
                     return true;
                 } catch (error) {
                     document.getElementById('loading').classList.remove('active');
+                    console.error("Error loading models or backend: ", error);
                     updateStatus('Error loading models: ' + error.message, 'warning');
                     return false;
                 }
             }
+            // =================================================================
+            // === AKHIR DARI PERUBAHAN ========================================
+            // =================================================================
             
             async function startCamera() {
                 try {
@@ -472,7 +484,7 @@
             function updateStatus(message, type = 'info') {
                 const statusDiv = document.getElementById('status');
                 statusDiv.textContent = message;
-                statusDiv.className = 'status alert-' + type;
+                statusDiv.className = 'status alert alert-' + type;
             }
             
             document.getElementById('startBtn').addEventListener('click', startCamera);
@@ -493,7 +505,6 @@
             
             initialize();
         });
-        // --- PERUBAHAN BERAKHIR DI SINI ---
     </script>
 </body>
 </html>
