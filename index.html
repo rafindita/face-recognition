@@ -1,336 +1,183 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Face Recognition - Mobile</title>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/face-api.min.js"></script>
+    <title>Advanced Face Recognition</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color-start: #667eea;
+            --primary-color-end: #764ba2;
+            --danger-color-start: #f093fb;
+            --danger-color-end: #f5576c;
+            --text-color: white;
+            --bg-blur: rgba(255, 255, 255, 0.1);
+            --bg-blur-darker: rgba(255, 255, 255, 0.15);
+            --known-color: #2ecc71; /* Hijau */
+            --unknown-color: #e74c3c; /* Merah */
         }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: white;
+            background: linear-gradient(135deg, var(--primary-color-start) 0%, var(--primary-color-end) 100%);
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+            padding: 15px; color: var(--text-color);
         }
-        
         .container {
-            width: 100%;
-            max-width: 600px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
+            width: 100%; max-width: 600px;
+            background: var(--bg-blur); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 28px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .subtitle {
-            text-align: center;
-            opacity: 0.9;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
+        h1 { text-align: center; margin-bottom: 10px; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .subtitle { text-align: center; opacity: 0.9; margin-bottom: 20px; font-size: 14px; }
         .video-container {
-            position: relative;
-            width: 100%;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #000;
-            margin-bottom: 20px;
+            position: relative; width: 100%; border-radius: 15px;
+            overflow: hidden; background: #000; margin-bottom: 20px; aspect-ratio: 4 / 3;
         }
-        
-        #videoElement {
-            width: 100%;
-            height: auto;
-            display: block;
+        #videoElement, #canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; transform: scaleX(-1);
         }
-        
-        #canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-card {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
+        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: var(--bg-blur-darker); padding: 15px; border-radius: 12px; text-align: center; }
+        .stat-label { font-size: 12px; opacity: 0.8; margin-bottom: 5px; }
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
         button {
-            flex: 1;
-            min-width: 120px;
-            padding: 15px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            flex: 1; min-width: 120px; padding: 15px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); color: var(--text-color);
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-        
-        button:active {
-            transform: scale(0.95);
-        }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            margin-top: 15px;
-            padding: 15px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.15);
-            text-align: center;
-            font-size: 14px;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .loading.active {
-            display: block;
-        }
-        
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color-start), var(--primary-color-end)); }
+        .btn-secondary { background: var(--bg-blur-darker); }
+        .btn-danger { background: linear-gradient(135deg, var(--danger-color-start), var(--danger-color-end)); }
+        button:active { transform: scale(0.95); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { margin-top: 15px; padding: 15px; border-radius: 12px; background: var(--bg-blur-darker); text-align: center; font-size: 14px; transition: background-color 0.3s; }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .loading.active { display: block; }
         .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid white;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid var(--text-color);
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 0 auto 10px;
         }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .person-list {
-            margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .person-list { margin-top: 15px; max-height: 200px; overflow-y: auto; }
         .person-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: var(--bg-blur); padding: 10px; margin-bottom: 8px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .alert-info {
-            background: rgba(52, 152, 219, 0.3);
-            border: 1px solid rgba(52, 152, 219, 0.5);
-        }
-        
-        .alert-warning {
-            background: rgba(241, 196, 15, 0.3);
-            border: 1px solid rgba(241, 196, 15, 0.5);
-        }
+        .person-item button { padding: 5px 10px; background: var(--unknown-color); border-radius: 5px; min-width: auto; flex: 0; }
+        .alert-info { background-color: rgba(52, 152, 219, 0.3); }
+        .alert-warning { background-color: rgba(241, 196, 15, 0.3); }
+        .alert-success { background-color: rgba(46, 204, 113, 0.3); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎭 Face Recognition</h1>
-        <div class="subtitle">High Accuracy Multi-Face Detection</div>
+        <h1>Advanced Face Recognition</h1>
+        <div class="subtitle">Multi-Sample Registration & Unknown Detection</div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <div>Loading AI models...</div>
+            <div id="loading-text">Loading AI models...</div>
         </div>
         
         <div class="video-container">
-            <video id="videoElement" autoplay playsinline></video>
+            <video id="videoElement" autoplay muted playsinline></video>
             <canvas id="canvas"></canvas>
         </div>
         
         <div class="stats">
-            <div class="stat-card">
-                <div class="stat-label">Faces Detected</div>
-                <div class="stat-value" id="faceCount">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">FPS</div>
-                <div class="stat-value" id="fps">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Registered</div>
-                <div class="stat-value" id="registeredCount">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Accuracy</div>
-                <div class="stat-value" id="accuracy">--</div>
-            </div>
+            <div class="stat-card"><div class="stat-label">Faces Detected</div><div class="stat-value" id="faceCount">0</div></div>
+            <div class="stat-card"><div class="stat-label">Registered</div><div class="stat-value" id="registeredCount">0</div></div>
         </div>
         
         <div class="controls">
             <button class="btn-primary" id="startBtn">Start Camera</button>
-            <button class="btn-secondary" id="registerBtn" disabled>Register Face</button>
+            <button class="btn-secondary" id="registerBtn" disabled>Register New Face</button>
             <button class="btn-danger" id="stopBtn" disabled>Stop</button>
         </div>
         
-        <div class="status" id="status">
-            Ready to start. Click "Start Camera" button.
-        </div>
-        
+        <div class="status" id="status">Ready to start.</div>
         <div class="person-list" id="personList"></div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Elemen DOM ---
             const videoElement = document.getElementById('videoElement');
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
+            const loadingDiv = document.getElementById('loading');
+            const loadingText = document.getElementById('loading-text');
+            const startBtn = document.getElementById('startBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            // --- Variabel State ---
             let stream = null;
-            let isRunning = false;
-            let fpsCounter = 0;
-            let lastFpsTime = Date.now();
-            
+            let detectionInterval = null;
             let faceDatabase = loadFromLocalStorage();
-            let detectionHistory = [];
-            
-            const MODELS_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            let faceMatcher = null;
 
-            function saveToLocalStorage() {
-                localStorage.setItem('faceDatabase', JSON.stringify(faceDatabase));
+            // --- Konfigurasi ---
+            const MODELS_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+            const DETECTION_INTERVAL_MS = 200; // 5 FPS
+            const SAMPLES_FOR_REGISTRATION = 5;
+            const DISTANCE_THRESHOLD = 0.5; // [LOGIKA KUNCI] Ambang batas untuk "Unknown"
+
+            // =================================================================
+            // === FUNGSI UTAMA (Inisialisasi, Kamera, Deteksi)
+            // =================================================================
+
+            async function initialize() {
+                const modelsLoaded = await loadModels();
+                if (modelsLoaded) {
+                    updateUIOnLoad();
+                }
             }
 
-            function loadFromLocalStorage() {
-                const data = localStorage.getItem('faceDatabase');
-                return data ? JSON.parse(data) : [];
-            }
-            
-            // =================================================================
-            // === PERUBAHAN ADA DI FUNGSI DI BAWAH INI =========================
-            // =================================================================
             async function loadModels() {
-                document.getElementById('loading').classList.add('active');
-                updateStatus('Initializing AI engine...', 'info');
-                
+                loadingDiv.classList.add('active');
                 try {
-                    // **[FIX]** Menambahkan inisialisasi backend WASM secara eksplisit
+                    loadingText.textContent = 'Initializing AI engine...';
                     await faceapi.tf.setBackend('wasm');
                     await faceapi.tf.ready();
                     
-                    updateStatus('Loading AI models...', 'info');
+                    loadingText.textContent = 'Loading AI models...';
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
+                        faceapi.nets.faceExpressionNet.loadFromUri(MODELS_URL) // Optional: untuk deteksi ekspresi
+                    ]);
                     
-                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
-                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL);
-                    await faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL);
-                    
-                    document.getElementById('loading').classList.remove('active');
+                    loadingDiv.classList.remove('active');
                     updateStatus('Models loaded! Ready to start.', 'info');
                     return true;
                 } catch (error) {
-                    document.getElementById('loading').classList.remove('active');
-                    console.error("Error loading models or backend: ", error);
+                    loadingDiv.classList.remove('active');
+                    console.error("Error loading models: ", error);
                     updateStatus('Error loading models: ' + error.message, 'warning');
                     return false;
                 }
             }
-            // =================================================================
-            // === AKHIR DARI PERUBAHAN ========================================
-            // =================================================================
-            
+
             async function startCamera() {
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'user',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        }
-                    });
-                    
+                    const constraints = { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
                     videoElement.srcObject = stream;
                     
                     videoElement.onloadedmetadata = () => {
                         canvas.width = videoElement.videoWidth;
                         canvas.height = videoElement.videoHeight;
-                        isRunning = true;
-                        detectFaces();
-                        
-                        document.getElementById('startBtn').disabled = true;
-                        document.getElementById('registerBtn').disabled = false;
-                        document.getElementById('stopBtn').disabled = false;
+                        setButtonsState(true);
                         updateStatus('Camera started. Detecting faces...', 'info');
+                        detectionInterval = setInterval(detectFaces, DETECTION_INTERVAL_MS);
                     };
                 } catch (error) {
                     updateStatus('Camera access denied: ' + error.message, 'warning');
@@ -338,171 +185,187 @@
             }
             
             function stopCamera() {
+                clearInterval(detectionInterval);
+                detectionInterval = null;
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
                     stream = null;
                 }
-                isRunning = false;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('registerBtn').disabled = true;
-                document.getElementById('stopBtn').disabled = true;
+                setButtonsState(false);
                 updateStatus('Camera stopped.', 'info');
+                document.getElementById('faceCount').textContent = 0;
             }
-            
+
             async function detectFaces() {
-                if (!isRunning) return;
-                
-                const detections = await faceapi
-                    .detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions({
-                        inputSize: 416,
-                        scoreThreshold: 0.5
-                    }))
+                if (!videoElement || videoElement.readyState < 4) return;
+
+                const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
                     .withFaceLandmarks()
                     .withFaceDescriptors();
-                
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                faceapi.tf.dispose(); // Membersihkan memori GPU
+
                 document.getElementById('faceCount').textContent = detections.length;
-                
-                detections.forEach((detection) => {
-                    const box = detection.detection.box;
-                    const descriptor = detection.descriptor;
-                    
-                    let bestMatch = null;
-                    let bestDistance = Infinity;
-                    
-                    faceDatabase.forEach(person => {
-                        const distance = faceapi.euclideanDistance(descriptor, person.descriptor);
-                        if (distance < bestDistance && distance < 0.6) {
-                            bestDistance = distance;
-                            bestMatch = person;
-                        }
-                    });
-                    
-                    const confidence = bestMatch ? Math.max(0, (1 - bestDistance) * 100) : 0;
-                    const color = bestMatch ? (confidence > 70 ? '#00ff00' : '#ffa500') : '#ff0000';
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(box.x, box.y, box.width, box.height);
-                    
-                    const label = bestMatch ? bestMatch.name : 'Unknown';
-                    const status = confidence > 80 ? 'EXCELLENT' : confidence > 65 ? 'GOOD' : confidence > 50 ? 'FAIR' : 'UNKNOWN';
-                    
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                    ctx.fillRect(box.x, box.y - 60, box.width, 60);
-                    
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.fillText(label, box.x + 5, box.y - 35);
-                    
-                    ctx.font = '12px Arial';
-                    ctx.fillStyle = '#00ffff';
-                    ctx.fillText(`Accuracy: ${confidence.toFixed(1)}%`, box.x + 5, box.y - 18);
-                    ctx.fillText(`Status: ${status}`, box.x + 5, box.y - 5);
-                    
-                    if (bestMatch && confidence > 60) {
-                        detectionHistory.push(bestMatch.name);
-                        if (detectionHistory.length > 100) {
-                            detectionHistory.shift();
-                        }
-                    }
-                });
-                
-                if (detectionHistory.length > 0) {
-                    const avgAcc = 85; // Placeholder
-                    document.getElementById('accuracy').textContent = avgAcc + '%';
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (detections.length > 0 && faceMatcher) {
+                    const results = detections.map(d => faceMatcher.findBestMatch(d.descriptor));
+                    results.forEach((result, i) => drawDetectionResult(detections[i], result));
+                } else if (detections.length > 0) {
+                    detections.forEach(d => drawDetectionResult(d, null));
                 }
-                
-                fpsCounter++;
-                const now = Date.now();
-                if (now - lastFpsTime >= 1000) {
-                    document.getElementById('fps').textContent = fpsCounter;
-                    fpsCounter = 0;
-                    lastFpsTime = now;
-                }
-                
-                requestAnimationFrame(detectFaces);
             }
+
+            // =================================================================
+            // === FUNGSI REGISTRASI (Logika Baru Multi-Sampel)
+            // =================================================================
             
             async function registerFace() {
-                const name = prompt('Enter person name:');
-                if (!name) return;
+                const name = prompt('Enter your name:');
+                if (!name || name.trim() === '') return;
                 
-                updateStatus('Capturing face... Please look at camera', 'info');
+                stopDetection(); // Jeda deteksi agar fokus pada registrasi
+                let descriptors = [];
                 
-                const detection = await faceapi
-                    .detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
-                
-                if (!detection) {
-                    updateStatus('No face detected! Please try again.', 'warning');
-                    return;
+                for (let i = 1; i <= SAMPLES_FOR_REGISTRATION; i++) {
+                    updateStatus(`Capturing sample ${i}/${SAMPLES_FOR_REGISTRATION}... Hold still.`, 'info');
+                    
+                    // Menunggu frame berikutnya agar tidak mengambil gambar yang sama
+                    await new Promise(resolve => setTimeout(resolve, 500)); 
+                    
+                    const detection = await faceapi.detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                    
+                    if (detection) {
+                        descriptors.push(detection.descriptor);
+                        // Feedback visual sementara
+                        const box = detection.detection.box;
+                        ctx.strokeStyle = '#FFFF00';
+                        ctx.strokeRect(box.x, box.y, box.width, box.height);
+                    } else {
+                        i--; // Ulangi pengambilan jika wajah tidak terdeteksi
+                        updateStatus(`Sample ${i+1} failed. Make sure your face is clear.`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 700));
+                    }
+                }
+
+                if (descriptors.length === SAMPLES_FOR_REGISTRATION) {
+                    // [UPGRADE] Rata-ratakan deskriptor untuk hasil yang lebih akurat
+                    const avgDescriptor = averageDescriptors(descriptors);
+                    faceDatabase.push({ name, descriptor: avgDescriptor });
+                    saveToLocalStorage();
+                    updateUIAfterDBChange();
+                    updateStatus(`✓ ${name} registered successfully!`, 'success');
+                } else {
+                    updateStatus('Registration failed. Could not get enough samples.', 'warning');
                 }
                 
-                faceDatabase.push({
-                    name: name,
-                    descriptor: Object.values(detection.descriptor),
-                    timestamp: new Date().toISOString()
-                });
+                startDetection(); // Lanjutkan deteksi kembali
+            }
+            
+            function averageDescriptors(descriptors) {
+                const numDescriptors = descriptors.length;
+                const descriptorSize = descriptors[0].length;
+                const avgDescriptor = new Float32Array(descriptorSize).fill(0);
 
-                saveToLocalStorage();
+                for (let i = 0; i < descriptorSize; i++) {
+                    for (let j = 0; j < numDescriptors; j++) {
+                        avgDescriptor[i] += descriptors[j][i];
+                    }
+                    avgDescriptor[i] /= numDescriptors;
+                }
+                return avgDescriptor;
+            }
 
-                faceDatabase[faceDatabase.length - 1].descriptor = new Float32Array(faceDatabase[faceDatabase.length - 1].descriptor);
+
+            // =================================================================
+            // === FUNGSI PEMBANTU (UI, Penyimpanan, Logika Tambahan)
+            // =================================================================
+            
+            function drawDetectionResult(detection, result) {
+                const box = detection.detection.box;
+                let label = "Detecting...";
+                let boxColor = 'yellow';
+
+                if (result) {
+                    // [LOGIKA KUNCI] Cek threshold di sini!
+                    if (result.distance < DISTANCE_THRESHOLD) {
+                        label = `${result.label} (${Math.round((1 - result.distance) * 100)}%)`;
+                        boxColor = 'var(--known-color)';
+                    } else {
+                        label = `Unknown (${Math.round((1 - result.distance) * 100)}%)`;
+                        boxColor = 'var(--unknown-color)';
+                    }
+                } else {
+                    label = "No registered faces";
+                    boxColor = 'orange';
+                }
                 
+                new faceapi.draw.DrawBox(box, { label, boxColor }).draw(canvas);
+            }
+
+            function loadFromLocalStorage() { return JSON.parse(localStorage.getItem('faceDatabase')) || []; }
+            function saveToLocalStorage() { localStorage.setItem('faceDatabase', JSON.stringify(faceDatabase)); }
+            
+            window.removePerson = function(index) {
+                if (confirm(`Remove ${faceDatabase[index].name}?`)) {
+                    faceDatabase.splice(index, 1);
+                    saveToLocalStorage();
+                    updateUIAfterDBChange();
+                    updateStatus('Person removed.', 'info');
+                }
+            };
+            
+            function updateUIOnLoad() {
+                faceDatabase = faceDatabase.map(person => ({
+                    ...person, descriptor: new Float32Array(Object.values(person.descriptor))
+                }));
+                updateUIAfterDBChange();
+            }
+
+            function updateUIAfterDBChange() {
                 document.getElementById('registeredCount').textContent = faceDatabase.length;
                 updatePersonList();
-                updateStatus(`✓ ${name} registered successfully!`, 'info');
+                if (faceDatabase.length > 0) {
+                    const labeledDescriptors = faceDatabase.map(p => new faceapi.LabeledFaceDescriptors(p.name, [p.descriptor]));
+                    faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, DISTANCE_THRESHOLD);
+                } else {
+                    faceMatcher = null;
+                }
             }
             
             function updatePersonList() {
                 const listDiv = document.getElementById('personList');
-                listDiv.innerHTML = '<div style="padding: 10px; opacity: 0.8;">Registered People:</div>';
-                
-                faceDatabase.forEach((person, index) => {
+                listDiv.innerHTML = faceDatabase.length > 0 ? '<div style="padding: 10px; opacity: 0.8;">Registered People:</div>' : '';
+                faceDatabase.forEach((p, i) => {
                     const item = document.createElement('div');
                     item.className = 'person-item';
-                    item.innerHTML = `
-                        <span>${person.name}</span>
-                        <button onclick="removePerson(${index})" style="padding: 5px 10px; border: none; background: rgba(255,0,0,0.5); color: white; border-radius: 5px; cursor: pointer;">Remove</button>
-                    `;
+                    item.innerHTML = `<span>${p.name}</span><button onclick="removePerson(${i})">X</button>`;
                     listDiv.appendChild(item);
                 });
             }
             
-            window.removePerson = function(index) {
-                if (confirm('Remove this person?')) {
-                    faceDatabase.splice(index, 1);
-                    saveToLocalStorage();
-                    document.getElementById('registeredCount').textContent = faceDatabase.length;
-                    updatePersonList();
-                    updateStatus('Person removed', 'info');
-                }
-            };
-            
-            function updateStatus(message, type = 'info') {
+            function updateStatus(message, type) {
                 const statusDiv = document.getElementById('status');
                 statusDiv.textContent = message;
-                statusDiv.className = 'status alert alert-' + type;
+                statusDiv.className = `status alert-${type}`;
             }
-            
-            document.getElementById('startBtn').addEventListener('click', startCamera);
-            document.getElementById('stopBtn').addEventListener('click', stopCamera);
-            document.getElementById('registerBtn').addEventListener('click', registerFace);
-            
-            async function initialize() {
-                const modelsLoaded = await loadModels();
-                if (modelsLoaded) {
-                    faceDatabase = faceDatabase.map(person => ({
-                        ...person,
-                        descriptor: new Float32Array(person.descriptor)
-                    }));
-                    document.getElementById('registeredCount').textContent = faceDatabase.length;
-                    updatePersonList();
-                }
+
+            function setButtonsState(isCameraOn) {
+                startBtn.disabled = isCameraOn;
+                registerBtn.disabled = !isCameraOn;
+                stopBtn.disabled = !isCameraOn;
             }
+
+            function startDetection() { if (!detectionInterval) detectionInterval = setInterval(detectFaces, DETECTION_INTERVAL_MS); }
+            function stopDetection() { clearInterval(detectionInterval); detectionInterval = null; }
+
+            // --- EVENT LISTENERS ---
+            startBtn.addEventListener('click', startCamera);
+            stopBtn.addEventListener('click', stopCamera);
+            registerBtn.addEventListener('click', registerFace);
             
+            // --- MULAI APLIKASI ---
             initialize();
         });
     </script>
